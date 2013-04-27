@@ -3,6 +3,12 @@
   <title>maker.js testing</title>
 </head>
 <body>
+  <div id="test">
+    <span>Hello, world</span>
+  </div>
   <script src="maker.js"></script>
+  <script>
+    var c = Maker.concentric(document.getElementById("test"), .75, { width: 100, height: 100 });
+  </script>
 </body>
 </html>
