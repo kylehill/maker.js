@@ -117,10 +117,6 @@
     return outbound;
   };
   
-  var utils = {
-    forEach: forEach
-  }
-  
   var builder = {
     
     init: function(element, chartType, options) {
@@ -178,27 +174,41 @@
     
   };
   
-  var animator = {
-    
-    transition: function(m, element, properties) {
-      
-    }
-    
-  };
-  
   Maker = extend(Maker, {
     
     concentric: function(element, data, options) {
+      // Precalculated options
       options.height = options.height || element.clientHeight;
       options.width = options.width || element.clientWidth;
       
       var m = builder.init(element, "concentric", options);
+
+      // Transmute data
+      var _data;
+      var transmute = function(data) {
+        switch (Object.prototype.toString.call(data)) {
+          case "[object Number]":
+          case "[object String]":
+            _data = { value: (data * 1) };
+            break;
+          case "[object Object]":
+            _data = { 
+              value: (data.value * 1),
+              name: data.name
+            };
+            break;
+        };
+        m.data = _data;
+      };
+      transmute(data);
       
+      // Calculated options
       m.options.radius = m.options.radius || (Math.min(m.options.height, m.options.width) / 2) - m.options.buffer;
       m.options.centerX = m.options.centerX || m.options.radius + m.options.buffer;
       m.options.centerY = m.options.centerY || m.options.radius + m.options.buffer;
-      m.options.drawOuter = m.options.drawOuter && (data < 1 && m.options.outerWidth > 0);
+      m.options.drawOuter = m.options.drawOuter && (_data.value < 1 && m.options.outerWidth > 0);
       
+      // Mold SVG
       m.svg.setAttribute("height", m.options.height);
       m.svg.setAttribute("width", m.options.width);
       
@@ -218,7 +228,7 @@
         m.shapes.outer = shaper.circle(outer);
       }
       
-      // Build
+      // Build inner circle
       var inner = {
         cx: m.options.centerX,
         cy: m.options.centerY,
@@ -231,9 +241,10 @@
       m.shapes.inner = shaper.circle(inner);
       
       m.render = function(data) {
-        if (m.isRendered) { m.update(data); return; }
+        transmute(data);
+        if (m.isRendered) { m.update(_data.value); return; }
         m.draw();
-        m.update(data);
+        if (data) { m.update(_data.value); }        
       };
       
       m.draw = function() {
@@ -244,27 +255,30 @@
       };
       
       m.update = function(data) {
-        var ticks = (m.options.animationLength / m.options.interval);
-        
-        var startVal = (m.shapes.inner.getAttribute("r") * 1);
-        var endVal = (m.options.radius * (Math.min(data, 1)));
-        
-        var tickDelta = (endVal - startVal) / ticks;
+        if (m.options.animates) {
+          var ticks = (m.options.animationLength / m.options.interval);
 
-        for (var i = 1; i < ticks; i++) {
-          window.setTimeout(function(updateTo){
-            m.shapes.inner.setAttribute("r", updateTo);
-          }, (i * m.options.interval), (startVal + (i * tickDelta)));
+          var startVal = (m.shapes.inner.getAttribute("r") * 1);
+          var endVal = (m.options.radius * (Math.min(data, 1)));
+
+          var tickDelta = (endVal - startVal) / ticks;
+
+          for (var i = 1; i < ticks; i++) {
+            window.setTimeout(function(updateTo){
+              m.shapes.inner.setAttribute("r", updateTo);
+            }, (i * m.options.interval), (startVal + (i * tickDelta)));
+          }
+          
+          return;
         }
-        
-        animator.transition(m, m.shapes.inner, { r: (m.options.radius * (Math.min(data, 1))) });
+        m.shapes.inner.setAttribute("r", (m.options.radius * (Math.min(data, 1))));
       };
       
       m.unload = function() {
         m.isRendered = false;
         builder.cleanElement(m.svg);
       };
-
+      
       m.render(data);
       return m;
     },
