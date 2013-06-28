@@ -13,7 +13,8 @@
     globalDefaults: {
       interval: 13,
       animates: true,
-      animationLength: 1000
+      animationLength: 1000,
+      after: false
     },
     
     typeDefaults: {
@@ -240,11 +241,12 @@
       }
       m.shapes.inner = shaper.circle(inner);
       
-      m.render = function(data) {
+      m.render = function(data, callback) {
+        callback = callback || m.options.after;
         transmute(data);
-        if (m.isRendered) { m.update(_data.value); return; }
+        if (m.isRendered) { m.update(_data.value, callback); return; }
         m.draw();
-        if (data) { m.update(_data.value); }        
+        if (data) { m.update(_data.value, callback); }        
       };
       
       m.draw = function() {
@@ -254,7 +256,7 @@
         m.isRendered = true;
       };
       
-      m.update = function(data) {
+      m.update = function(data, callback) {
         if (m.options.animates) {
           var ticks = (m.options.animationLength / m.options.interval);
 
@@ -269,6 +271,12 @@
             }, (i * m.options.interval), (startVal + (i * tickDelta)));
           }
           
+          if (callback) {
+            window.setTimeout(function(context) {
+              callback.apply(context);
+            }, (ticks * m.options.interval), this);
+          }
+          
           return;
         }
         m.shapes.inner.setAttribute("r", (m.options.radius * (Math.min(data, 1))));
@@ -279,7 +287,7 @@
         builder.cleanElement(m.svg);
       };
       
-      m.render(data);
+      m.render(data, options.after);
       return m;
     },
     
